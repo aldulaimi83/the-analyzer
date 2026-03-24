@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grok Stock Analyzer • TSLA • AMD • AAPL • NVDA</title>
+    <title>Grok Stock Analyzer</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600&display=swap" rel="stylesheet">
@@ -25,10 +25,7 @@
                 <div class="w-10 h-10 bg-emerald-500 rounded-2xl flex items-center justify-center text-3xl">📈</div>
                 <h1 class="title-font text-4xl tracking-tighter font-semibold">Grok Stock Analyzer</h1>
             </div>
-            <button onclick="refreshAll()" 
-                    class="flex items-center gap-2 bg-zinc-900 hover:bg-emerald-950 px-6 py-3 rounded-3xl text-sm font-medium">
-                ⟳ Refresh All Data
-            </button>
+            <button onclick="refreshAll()" class="flex items-center gap-2 bg-zinc-900 hover:bg-emerald-950 px-6 py-3 rounded-3xl text-sm font-medium">⟳ Refresh</button>
         </nav>
 
         <div class="flex">
@@ -37,9 +34,18 @@
                 <h2 class="uppercase text-xs tracking-widest text-zinc-500 mb-4">Watchlist</h2>
                 <div id="stock-list" class="space-y-4"></div>
 
-                <div class="mt-16">
-                    <h2 class="uppercase text-xs tracking-widest text-zinc-500 mb-4">Global Indices</h2>
-                    <div id="global-indices" class="space-y-4"></div>
+                <!-- Search Box -->
+                <div class="mt-10">
+                    <h3 class="text-sm text-zinc-400 mb-3">Search Any Ticker</h3>
+                    <div class="flex gap-2">
+                        <input id="ticker-input" 
+                               type="text" 
+                               placeholder="e.g. MSFT, GOOGL, AMZN"
+                               class="flex-1 bg-zinc-900 border border-zinc-700 rounded-3xl px-5 py-3 text-white focus:outline-none focus:border-emerald-500">
+                        <button onclick="loadCustomTicker()" 
+                                class="bg-emerald-600 hover:bg-emerald-500 px-6 rounded-3xl font-medium">Load</button>
+                    </div>
+                    <p class="text-xs text-zinc-500 mt-2">Press Enter after typing</p>
                 </div>
             </div>
 
@@ -55,7 +61,7 @@
                         <div id="price-change" class="text-3xl mt-2"></div>
                     </div>
 
-                    <!-- Grok Stock Recommendation -->
+                    <!-- Grok Recommendation -->
                     <div id="recommendation-card" class="w-96 rounded-3xl p-7 text-black shadow-2xl">
                         <div class="flex justify-between mb-4">
                             <div class="uppercase text-sm font-bold">GROK RECOMMENDATION</div>
@@ -66,10 +72,10 @@
                     </div>
                 </div>
 
-                <!-- Live Chart -->
+                <!-- Chart -->
                 <div class="bg-zinc-900 rounded-3xl p-8 mb-10 border border-zinc-800">
                     <div class="flex justify-between mb-6">
-                        <h3 class="text-xl font-semibold">Live Price Chart</h3>
+                        <h3 class="text-xl font-semibold">Price Chart</h3>
                         <div class="flex gap-2 text-sm">
                             <button onclick="changePeriod(this, '1mo')" class="period-btn active px-5 py-2 rounded-3xl bg-emerald-950">1M</button>
                             <button onclick="changePeriod(this, '3mo')" class="period-btn px-5 py-2 rounded-3xl hover:bg-zinc-800">3M</button>
@@ -82,23 +88,20 @@
                     </div>
                 </div>
 
-                <!-- Options Recommendation -->
+                <!-- Options Play -->
                 <div class="bg-zinc-900 rounded-3xl p-8 mb-10">
-                    <h3 class="text-xl font-semibold mb-6">📌 Grok Options Play</h3>
+                    <h3 class="text-xl font-semibold mb-6">📌 Grok Options Recommendation</h3>
                     <div id="options-recommendation" class="flex gap-6"></div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-8">
-                    <!-- Real News Feed -->
+                    <!-- News -->
                     <div class="bg-zinc-900 rounded-3xl p-8">
-                        <h3 class="text-xl font-semibold mb-6 flex items-center justify-between">
-                            Latest News 
-                            <span id="news-ticker" class="text-xs bg-zinc-800 px-3 py-1 rounded-full"></span>
-                        </h3>
-                        <div id="news-feed" class="space-y-6 max-h-[520px] overflow-y-auto pr-2"></div>
+                        <h3 class="text-xl font-semibold mb-6">Latest News</h3>
+                        <div id="news-feed" class="space-y-6 max-h-[520px] overflow-y-auto"></div>
                     </div>
 
-                    <!-- Metrics & Global Impact -->
+                    <!-- Metrics -->
                     <div class="bg-zinc-900 rounded-3xl p-8">
                         <h3 class="text-xl font-semibold mb-6">Key Metrics & Global Impact</h3>
                         <div id="metrics" class="grid grid-cols-2 gap-6"></div>
@@ -114,7 +117,7 @@
         let currentTicker = 'TSLA';
         let currentChart = null;
 
-        const watchlist = ['TSLA', 'AMD', 'AAPL', 'NVDA'];
+        const defaultWatchlist = ['TSLA', 'AMD', 'AAPL', 'NVDA'];
 
         async function fetchFinnhub(endpoint) {
             const res = await fetch(`https://finnhub.io/api/v1/${endpoint}&token=${API_KEY}`);
@@ -132,7 +135,7 @@
             return { dates, closes: data.c };
         }
 
-        async function renderChart(ticker, period) {
+        async function renderChart(ticker, period = '1mo') {
             if (currentChart) currentChart.destroy();
             const ctx = document.getElementById('price-chart');
             try {
@@ -158,24 +161,23 @@
                     }
                 });
             } catch(e) {
-                ctx.innerHTML = '<div class="text-center py-20 text-amber-400">Chart data temporarily unavailable</div>';
+                ctx.innerHTML = '<div class="text-center py-20 text-amber-400">Chart data not available for this ticker</div>';
             }
         }
 
         async function renderNews(ticker) {
             const container = document.getElementById('news-feed');
-            container.innerHTML = '<div class="text-zinc-400 py-8 text-center">Loading latest news...</div>';
-            document.getElementById('news-ticker').textContent = ticker;
-
+            container.innerHTML = '<div class="text-zinc-400 py-8 text-center">Loading news...</div>';
             try {
-                const data = await fetchFinnhub(`company-news?symbol=${ticker}&from=${new Date(Date.now() - 7*86400000).toISOString().split('T')[0]}&to=${new Date().toISOString().split('T')[0]}`);
+                const fromDate = new Date(Date.now() - 7*24*60*60*1000).toISOString().split('T')[0];
+                const toDate = new Date().toISOString().split('T')[0];
+                const data = await fetchFinnhub(`company-news?symbol=${ticker}&from=${fromDate}&to=${toDate}`);
                 
                 container.innerHTML = '';
-                if (data.length === 0) {
+                if (!data || data.length === 0) {
                     container.innerHTML = '<p class="text-zinc-400">No recent news found.</p>';
                     return;
                 }
-
                 data.slice(0, 8).forEach(article => {
                     const date = new Date(article.datetime * 1000).toLocaleDateString('en-US', {month:'short', day:'numeric'});
                     const html = `
@@ -186,14 +188,14 @@
                     container.innerHTML += html;
                 });
             } catch(e) {
-                container.innerHTML = '<p class="text-amber-400">News temporarily unavailable. Try refreshing.</p>';
+                container.innerHTML = '<p class="text-amber-400">News temporarily unavailable.</p>';
             }
         }
 
         async function renderWatchlist() {
             const container = document.getElementById('stock-list');
             container.innerHTML = '';
-            for (let ticker of watchlist) {
+            for (let ticker of defaultWatchlist) {
                 try {
                     const quote = await fetchFinnhub(`quote?symbol=${ticker}`);
                     const changePct = quote.dp || 0;
@@ -214,29 +216,33 @@
         }
 
         async function selectStock(ticker) {
-            currentTicker = ticker;
-            document.getElementById('stock-ticker').textContent = ticker;
-            document.getElementById('stock-name').textContent = ticker;
+            currentTicker = ticker.toUpperCase();
+            document.getElementById('stock-ticker').textContent = currentTicker;
+            document.getElementById('stock-name').textContent = currentTicker;
 
-            const quote = await fetchFinnhub(`quote?symbol=${ticker}`);
-            document.getElementById('current-price').innerHTML = `$${quote.c.toFixed(2)}`;
-            const isUp = quote.dp >= 0;
-            document.getElementById('price-change').innerHTML = `<span class="${isUp ? 'text-emerald-400' : 'text-red-400'}">${isUp ? '▲' : '▼'} ${quote.dp.toFixed(2)}%</span>`;
+            try {
+                const quote = await fetchFinnhub(`quote?symbol=${currentTicker}`);
+                document.getElementById('current-price').innerHTML = `$${quote.c.toFixed(2)}`;
+                const isUp = quote.dp >= 0;
+                document.getElementById('price-change').innerHTML = `<span class="${isUp ? 'text-emerald-400' : 'text-red-400'}">${isUp ? '▲' : '▼'} ${quote.dp.toFixed(2)}%</span>`;
 
-            renderRecommendation(ticker, quote);
-            renderOptionsRecommendation(ticker, quote);
-            renderMetrics(quote);
-            renderGlobalImpact(ticker);
-            renderChart(ticker, '1mo');
-            renderNews(ticker);           // ← Real news feed
+                renderRecommendation(quote);
+                renderOptionsRecommendation(quote);
+                renderMetrics(quote);
+                renderGlobalImpact(currentTicker);
+                renderChart(currentTicker, '1mo');
+                renderNews(currentTicker);
+            } catch(e) {
+                alert(`Could not load data for ${currentTicker}. Make sure the ticker is valid (e.g. AAPL, TSLA, MSFT).`);
+            }
         }
 
-        function renderRecommendation(ticker, quote) {
+        function renderRecommendation(quote) {
             const change = quote.dp || 0;
             let rec = "HOLD", conf = 70, color = "rec-hold", reason = "Solid long-term story.";
-            if (change > 2) { rec = "STRONG BUY"; conf = 88; color = "rec-buy"; reason = "Very strong momentum."; }
+            if (change > 2) { rec = "STRONG BUY"; conf = 88; color = "rec-buy"; reason = "Very strong momentum today."; }
             else if (change > 0.5) { rec = "BUY"; conf = 80; color = "rec-buy"; reason = "Positive short-term trend."; }
-            else if (change < -2) { rec = "SELL"; conf = 75; color = "rec-sell"; reason = "Recent weakness."; }
+            else if (change < -2) { rec = "SELL"; conf = 75; color = "rec-sell"; reason = "Recent weakness detected."; }
 
             const card = document.getElementById('recommendation-card');
             card.className = `w-96 rounded-3xl p-7 text-black shadow-2xl ${color}`;
@@ -245,7 +251,7 @@
             document.getElementById('rec-reason').innerHTML = reason;
         }
 
-        function renderOptionsRecommendation(ticker, quote) {
+        function renderOptionsRecommendation(quote) {
             const change = quote.dp || 0;
             let callPut = "NEUTRAL", confidence = 65, reason = "Waiting for clearer direction.";
             if (change > 1.5) {
@@ -255,7 +261,7 @@
             } else if (change < -1.5) {
                 callPut = "BUY PUTS";
                 confidence = 78;
-                reason = "Bearish pressure — Puts are favorable for downside play.";
+                reason = "Bearish pressure — Puts are favorable.";
             }
             document.getElementById('options-recommendation').innerHTML = `
                 <div class="flex-1 bg-black rounded-3xl p-6">
@@ -277,12 +283,12 @@
 
         function renderGlobalImpact(ticker) {
             const impacts = {
-                TSLA: "Interest rates, China EV demand, and regulatory news",
-                AMD: "AI chip demand and US-China semiconductor tensions",
-                AAPL: "China sales and iPhone cycle",
-                NVDA: "AI spending and export restrictions to China"
+                TSLA: "Interest rates, China EV demand, regulatory news",
+                AMD: "AI chip demand, US-China tensions",
+                AAPL: "China sales, iPhone cycle",
+                NVDA: "AI spending, export restrictions"
             };
-            document.getElementById('global-impact').innerHTML = `<strong>Global factors for ${ticker}:</strong><br>${impacts[ticker]}`;
+            document.getElementById('global-impact').innerHTML = `<strong>Global factors for ${ticker}:</strong><br>${impacts[ticker] || 'Macro trends and sector news'}`;
         }
 
         function changePeriod(btn, period) {
@@ -291,11 +297,27 @@
             renderChart(currentTicker, period);
         }
 
+        function loadCustomTicker() {
+            let input = document.getElementById('ticker-input').value.trim().toUpperCase();
+            if (input) {
+                selectStock(input);
+            }
+        }
+
+        // Allow pressing Enter in the input field
+        document.addEventListener('DOMContentLoaded', () => {
+            const input = document.getElementById('ticker-input');
+            input.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') loadCustomTicker();
+            });
+        });
+
         async function refreshAll() {
             await renderWatchlist();
             await selectStock(currentTicker);
         }
 
+        // Start the app
         window.onload = () => {
             renderWatchlist();
             selectStock('TSLA');
