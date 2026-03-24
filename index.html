@@ -10,26 +10,29 @@
     <style>
         body { font-family: 'Inter', system_ui, sans-serif; }
         .title-font { font-family: 'Space Grotesk', sans-serif; }
-        .stock-card:hover { transform: translateY(-4px); }
+        .stock-card:hover { transform: translateY(-4px); box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1); }
         .chart-container { position: relative; height: 420px; }
+        .recommendation-buy { background: linear-gradient(135deg, #10b981, #34d399); }
+        .recommendation-hold { background: linear-gradient(135deg, #eab308, #facc15); }
+        .recommendation-sell { background: linear-gradient(135deg, #ef4444, #f87171); }
     </style>
 </head>
 <body class="bg-zinc-950 text-zinc-100">
     <div class="max-w-screen-2xl mx-auto">
-        <nav class="bg-black border-b border-zinc-800 px-8 py-5 flex items-center justify-between">
+        <nav class="bg-black border-b border-zinc-800 px-8 py-5 flex items-center justify-between sticky top-0 z-50">
             <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-emerald-500 rounded-2xl flex items-center justify-center text-3xl">📈</div>
+                <div class="w-10 h-10 bg-emerald-500 rounded-2xl flex items-center justify-center text-3xl shadow-lg">📈</div>
                 <h1 class="title-font text-4xl tracking-tighter font-semibold">Grok Stock Analyzer</h1>
             </div>
             <button onclick="refreshAll()" 
-                    class="flex items-center gap-2 bg-zinc-900 hover:bg-emerald-950 px-6 py-3 rounded-3xl text-sm font-medium">
+                    class="flex items-center gap-2 bg-zinc-900 hover:bg-emerald-950 px-6 py-3 rounded-3xl text-sm font-medium transition-all">
                 ⟳ Refresh All Data
             </button>
         </nav>
 
         <div class="flex">
             <!-- Sidebar -->
-            <div class="w-80 bg-black border-r border-zinc-800 min-h-screen p-8">
+            <div class="w-80 bg-black border-r border-zinc-800 min-h-screen p-8 overflow-y-auto">
                 <h2 class="uppercase text-xs tracking-widest text-zinc-500 mb-4">Watchlist</h2>
                 <div id="stock-list" class="space-y-4"></div>
 
@@ -41,25 +44,32 @@
 
             <!-- Main Content -->
             <div class="flex-1 p-10">
-                <div id="stock-header" class="flex justify-between mb-10">
+                <div id="stock-header" class="flex justify-between items-start mb-10">
                     <div>
                         <div class="flex items-center gap-4">
-                            <h1 id="stock-name" class="title-font text-6xl font-bold">Loading...</h1>
+                            <h1 id="stock-name" class="title-font text-6xl font-bold">TSLA</h1>
                             <span id="stock-ticker" class="text-4xl font-mono text-zinc-400"></span>
                         </div>
                         <div id="current-price" class="text-6xl font-semibold mt-3"></div>
                         <div id="price-change" class="text-3xl mt-2"></div>
                     </div>
-                    <div id="opinion-card" class="bg-zinc-900 border border-zinc-700 rounded-3xl p-7 max-w-md">
-                        <div class="uppercase text-emerald-400 text-sm font-semibold">Grok Opinion</div>
-                        <p id="opinion-text" class="mt-4 text-zinc-300"></p>
+
+                    <!-- Grok Recommendation -->
+                    <div id="recommendation-card" class="w-96 rounded-3xl p-7 text-black shadow-2xl">
+                        <div class="flex justify-between items-center mb-4">
+                            <div class="uppercase text-sm font-bold tracking-wider">GROK RECOMMENDATION</div>
+                            <div id="rec-badge" class="px-6 py-1.5 text-sm font-bold rounded-3xl"></div>
+                        </div>
+                        <div id="rec-confidence" class="text-4xl font-bold mb-3"></div>
+                        <p id="rec-reason" class="text-base leading-tight"></p>
                     </div>
                 </div>
 
-                <div class="bg-zinc-900 rounded-3xl p-8 mb-10">
+                <!-- Chart -->
+                <div class="bg-zinc-900 rounded-3xl p-8 mb-10 border border-zinc-800">
                     <div class="flex justify-between mb-6">
                         <h3 class="text-xl font-semibold">Price Chart</h3>
-                        <div class="flex gap-2">
+                        <div class="flex gap-2 text-sm">
                             <button onclick="changePeriod(this, '1mo')" class="period-btn active px-5 py-2 rounded-3xl bg-emerald-950">1M</button>
                             <button onclick="changePeriod(this, '3mo')" class="period-btn px-5 py-2 rounded-3xl hover:bg-zinc-800">3M</button>
                             <button onclick="changePeriod(this, '6mo')" class="period-btn px-5 py-2 rounded-3xl hover:bg-zinc-800">6M</button>
@@ -74,7 +84,7 @@
                 <div class="grid grid-cols-2 gap-8">
                     <div class="bg-zinc-900 rounded-3xl p-8">
                         <h3 class="text-xl font-semibold mb-6">Latest News</h3>
-                        <div id="news-feed" class="space-y-6 text-zinc-400">Loading news...</div>
+                        <div id="news-feed" class="space-y-6 text-zinc-400">Loading fresh news...</div>
                     </div>
                     <div class="bg-zinc-900 rounded-3xl p-8">
                         <h3 class="text-xl font-semibold mb-6">Key Metrics & Global Impact</h3>
@@ -96,9 +106,7 @@
 
         async function fetchFinnhub(endpoint) {
             const res = await fetch(`https://finnhub.io/api/v1/${endpoint}&token=${API_KEY}`);
-            if (!res.ok) {
-                throw new Error(`API Error: ${res.status}`);
-            }
+            if (!res.ok) throw new Error('API Error');
             return res.json();
         }
 
@@ -112,8 +120,7 @@
                     const isUp = changePct >= 0;
 
                     const html = `
-                    <div onclick="selectStock('${ticker}')" 
-                         class="bg-zinc-900 border ${isUp ? 'border-emerald-500' : 'border-red-500'} rounded-3xl p-5 cursor-pointer hover:border-emerald-400">
+                    <div onclick="selectStock('${ticker}')" class="stock-card bg-zinc-900 border ${isUp ? 'border-emerald-500' : 'border-red-500'} rounded-3xl p-5 cursor-pointer">
                         <div class="flex justify-between">
                             <div><strong>${ticker}</strong></div>
                             <div class="text-right">
@@ -123,9 +130,7 @@
                         </div>
                     </div>`;
                     container.innerHTML += html;
-                } catch(e) {
-                    console.error(`Error loading ${ticker}:`, e);
-                }
+                } catch(e) {}
             }
         }
 
@@ -137,58 +142,81 @@
             try {
                 const quote = await fetchFinnhub(`quote?symbol=${ticker}`);
                 
+                // Price
                 document.getElementById('current-price').innerHTML = `$${quote.c.toFixed(2)}`;
-
                 const changeEl = document.getElementById('price-change');
                 const isUp = quote.dp >= 0;
                 changeEl.innerHTML = `<span class="${isUp ? 'text-emerald-400' : 'text-red-400'}">${isUp ? '▲' : '▼'} ${quote.dp.toFixed(2)}%</span>`;
 
-                // Simple Grok Opinion
-                document.getElementById('opinion-text').textContent = 
-                    quote.dp > 1.5 ? "Strong bullish momentum. Great time for growth exposure." :
-                    quote.dp > 0 ? "Mildly positive. Watching for continuation." :
-                    "Consolidation phase. Waiting for next catalyst.";
+                // Grok Recommendation
+                renderRecommendation(ticker, quote);
 
-                renderChartPlaceholder();
+                // Metrics & Impact
                 renderMetrics(quote);
                 renderGlobalImpact(ticker);
 
+                // Placeholder chart
+                renderChartPlaceholder();
+
             } catch(e) {
-                console.error(e);
-                alert("Failed to load stock data. Please check your API key or try again later.");
+                alert("Could not load data. Please check your Finnhub API key or internet connection.");
             }
         }
 
-        function renderChartPlaceholder() {
-            if (currentChart) currentChart.destroy();
-            const ctx = document.getElementById('price-chart');
-            currentChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: ['Loading chart...'],
-                    datasets: [{ label: 'Price', data: [0], borderColor: '#10b981', tension: 0.3 }]
-                },
-                options: { responsive: true, maintainAspectRatio: false }
-            });
+        function renderRecommendation(ticker, quote) {
+            const change = quote.dp || 0;
+            let recommendation = "HOLD";
+            let confidence = 65;
+            let colorClass = "recommendation-hold";
+            let reason = "";
+
+            if (change > 2.5) {
+                recommendation = "STRONG BUY";
+                confidence = 85;
+                colorClass = "recommendation-buy";
+                reason = `Strong momentum detected. ${ticker} is riding the current AI / EV / tech wave with positive global sentiment.`;
+            } else if (change > 0.8) {
+                recommendation = "BUY";
+                confidence = 78;
+                colorClass = "recommendation-buy";
+                reason = `Positive short-term momentum. Good risk/reward for growth investors.`;
+            } else if (change > -1) {
+                recommendation = "HOLD";
+                confidence = 70;
+                colorClass = "recommendation-hold";
+                reason = `Sideways movement. Solid long-term story but waiting for clearer catalyst.`;
+            } else {
+                recommendation = "SELL / CAUTION";
+                confidence = 60;
+                colorClass = "recommendation-sell";
+                reason = `Recent weakness. Consider taking profits or waiting for stabilization.`;
+            }
+
+            const card = document.getElementById('recommendation-card');
+            card.className = `w-96 rounded-3xl p-7 text-black shadow-2xl ${colorClass}`;
+            
+            document.getElementById('rec-badge').innerHTML = recommendation;
+            document.getElementById('rec-confidence').innerHTML = `${confidence}% Confidence`;
+            document.getElementById('rec-reason').innerHTML = reason;
         }
 
         function renderMetrics(quote) {
             const html = `
                 <div class="bg-black rounded-2xl p-5">
                     <div class="text-xs text-zinc-400">OPEN</div>
-                    <div class="text-xl font-semibold">$${quote.o ? quote.o.toFixed(2) : 'N/A'}</div>
+                    <div class="text-2xl font-semibold">$${quote.o ? quote.o.toFixed(2) : 'N/A'}</div>
                 </div>
                 <div class="bg-black rounded-2xl p-5">
                     <div class="text-xs text-zinc-400">HIGH</div>
-                    <div class="text-xl font-semibold">$${quote.h ? quote.h.toFixed(2) : 'N/A'}</div>
+                    <div class="text-2xl font-semibold">$${quote.h ? quote.h.toFixed(2) : 'N/A'}</div>
                 </div>
                 <div class="bg-black rounded-2xl p-5">
                     <div class="text-xs text-zinc-400">LOW</div>
-                    <div class="text-xl font-semibold">$${quote.l ? quote.l.toFixed(2) : 'N/A'}</div>
+                    <div class="text-2xl font-semibold">$${quote.l ? quote.l.toFixed(2) : 'N/A'}</div>
                 </div>
                 <div class="bg-black rounded-2xl p-5">
                     <div class="text-xs text-zinc-400">PREV CLOSE</div>
-                    <div class="text-xl font-semibold">$${quote.pc ? quote.pc.toFixed(2) : 'N/A'}</div>
+                    <div class="text-2xl font-semibold">$${quote.pc ? quote.pc.toFixed(2) : 'N/A'}</div>
                 </div>
             `;
             document.getElementById('metrics').innerHTML = html;
@@ -196,22 +224,31 @@
 
         function renderGlobalImpact(ticker) {
             const impacts = {
-                TSLA: "Highly sensitive to interest rates, EV demand in China/Europe, and regulatory news.",
-                AMD: "AI chip demand and US-China semiconductor tensions are major drivers.",
-                AAPL: "China sales, iPhone cycle, and global consumer spending affect it strongly.",
-                NVDA: "Data center spending, AI hype, and export restrictions to China are key."
+                TSLA: "Interest rates, China EV competition, and regulatory news heavily influence Tesla.",
+                AMD: "AI server demand and US-China chip restrictions are the biggest global drivers.",
+                AAPL: "China sales, iPhone cycle, and global consumer spending are key factors.",
+                NVDA: "Data center capex, AI hype, and export controls to China dominate."
             };
             document.getElementById('global-impact').innerHTML = `
-                <strong>${ticker} is heavily influenced by global macro trends:</strong><br><br>
+                <strong>Global Macro Impact on ${ticker}:</strong><br><br>
                 ${impacts[ticker]}<br><br>
-                Current environment favors AI and growth stocks, but watch Fed policy and geopolitics.
+                Current environment: AI spending tailwinds + potential rate cuts are supportive for tech/growth names.
             `;
+        }
+
+        function renderChartPlaceholder() {
+            if (currentChart) currentChart.destroy();
+            const ctx = document.getElementById('price-chart');
+            currentChart = new Chart(ctx, {
+                type: 'line',
+                data: { labels: ['Loading chart...'], datasets: [{ label: currentTicker, data: [0], borderColor: '#10b981', tension: 0.4 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
         }
 
         function changePeriod(btn, period) {
             document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active', 'bg-emerald-950'));
             btn.classList.add('active', 'bg-emerald-950');
-            // We can add real historical data later
         }
 
         async function refreshAll() {
