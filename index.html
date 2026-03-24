@@ -21,7 +21,8 @@
                 <div class="w-10 h-10 bg-emerald-500 rounded-2xl flex items-center justify-center text-3xl">📈</div>
                 <h1 class="title-font text-4xl tracking-tighter font-semibold">Grok Stock Analyzer</h1>
             </div>
-            <button onclick="refreshAll()" class="flex items-center gap-2 bg-zinc-900 hover:bg-emerald-950 px-6 py-3 rounded-3xl text-sm font-medium">
+            <button onclick="refreshAll()" 
+                    class="flex items-center gap-2 bg-zinc-900 hover:bg-emerald-950 px-6 py-3 rounded-3xl text-sm font-medium">
                 ⟳ Refresh All Data
             </button>
         </nav>
@@ -73,7 +74,7 @@
                 <div class="grid grid-cols-2 gap-8">
                     <div class="bg-zinc-900 rounded-3xl p-8">
                         <h3 class="text-xl font-semibold mb-6">Latest News</h3>
-                        <div id="news-feed" class="space-y-6"></div>
+                        <div id="news-feed" class="space-y-6 text-zinc-400">Loading news...</div>
                     </div>
                     <div class="bg-zinc-900 rounded-3xl p-8">
                         <h3 class="text-xl font-semibold mb-6">Key Metrics & Global Impact</h3>
@@ -86,7 +87,8 @@
     </div>
 
     <script>
-        const API_KEY = "d71fb41r01qot5jd7n50d71fb41r01qot5jd7n5g";   // ←←← PUT YOUR KEY HERE
+        const API_KEY = "d71fb41r01qot5jd7n50d71fb41r01qot5jd7n5g";
+
         let currentTicker = 'TSLA';
         let currentChart = null;
 
@@ -94,7 +96,9 @@
 
         async function fetchFinnhub(endpoint) {
             const res = await fetch(`https://finnhub.io/api/v1/${endpoint}&token=${API_KEY}`);
-            if (!res.ok) throw new Error('API error');
+            if (!res.ok) {
+                throw new Error(`API Error: ${res.status}`);
+            }
             return res.json();
         }
 
@@ -108,7 +112,8 @@
                     const isUp = changePct >= 0;
 
                     const html = `
-                    <div onclick="selectStock('${ticker}')" class="bg-zinc-900 border ${isUp ? 'border-emerald-500' : 'border-red-500'} rounded-3xl p-5 cursor-pointer hover:border-emerald-400">
+                    <div onclick="selectStock('${ticker}')" 
+                         class="bg-zinc-900 border ${isUp ? 'border-emerald-500' : 'border-red-500'} rounded-3xl p-5 cursor-pointer hover:border-emerald-400">
                         <div class="flex justify-between">
                             <div><strong>${ticker}</strong></div>
                             <div class="text-right">
@@ -118,33 +123,39 @@
                         </div>
                     </div>`;
                     container.innerHTML += html;
-                } catch(e) {}
+                } catch(e) {
+                    console.error(`Error loading ${ticker}:`, e);
+                }
             }
         }
 
         async function selectStock(ticker) {
             currentTicker = ticker;
             document.getElementById('stock-ticker').textContent = ticker;
+            document.getElementById('stock-name').textContent = ticker;
 
             try {
                 const quote = await fetchFinnhub(`quote?symbol=${ticker}`);
-                document.getElementById('stock-name').textContent = ticker;
+                
                 document.getElementById('current-price').innerHTML = `$${quote.c.toFixed(2)}`;
 
                 const changeEl = document.getElementById('price-change');
                 const isUp = quote.dp >= 0;
                 changeEl.innerHTML = `<span class="${isUp ? 'text-emerald-400' : 'text-red-400'}">${isUp ? '▲' : '▼'} ${quote.dp.toFixed(2)}%</span>`;
 
-                // Simple opinion
-                document.getElementById('opinion-text').textContent = quote.dp > 1 ? 
-                    "Strong momentum today. Good entry for long-term AI/EV exposure." : 
-                    "Healthy consolidation. Watch next macro catalyst.";
+                // Simple Grok Opinion
+                document.getElementById('opinion-text').textContent = 
+                    quote.dp > 1.5 ? "Strong bullish momentum. Great time for growth exposure." :
+                    quote.dp > 0 ? "Mildly positive. Watching for continuation." :
+                    "Consolidation phase. Waiting for next catalyst.";
 
-                // Render chart (Finnhub candle data can be added later if needed)
                 renderChartPlaceholder();
+                renderMetrics(quote);
+                renderGlobalImpact(ticker);
 
             } catch(e) {
-                alert("Failed to load data. Make sure you inserted your Finnhub API key correctly.");
+                console.error(e);
+                alert("Failed to load stock data. Please check your API key or try again later.");
             }
         }
 
@@ -153,16 +164,54 @@
             const ctx = document.getElementById('price-chart');
             currentChart = new Chart(ctx, {
                 type: 'line',
-                data: { labels: ['Loading...'], datasets: [{ label: 'Price', data: [0], borderColor: '#10b981' }] },
+                data: {
+                    labels: ['Loading chart...'],
+                    datasets: [{ label: 'Price', data: [0], borderColor: '#10b981', tension: 0.3 }]
+                },
                 options: { responsive: true, maintainAspectRatio: false }
             });
-            // Note: Full historical chart requires another Finnhub call - we can add it later
+        }
+
+        function renderMetrics(quote) {
+            const html = `
+                <div class="bg-black rounded-2xl p-5">
+                    <div class="text-xs text-zinc-400">OPEN</div>
+                    <div class="text-xl font-semibold">$${quote.o ? quote.o.toFixed(2) : 'N/A'}</div>
+                </div>
+                <div class="bg-black rounded-2xl p-5">
+                    <div class="text-xs text-zinc-400">HIGH</div>
+                    <div class="text-xl font-semibold">$${quote.h ? quote.h.toFixed(2) : 'N/A'}</div>
+                </div>
+                <div class="bg-black rounded-2xl p-5">
+                    <div class="text-xs text-zinc-400">LOW</div>
+                    <div class="text-xl font-semibold">$${quote.l ? quote.l.toFixed(2) : 'N/A'}</div>
+                </div>
+                <div class="bg-black rounded-2xl p-5">
+                    <div class="text-xs text-zinc-400">PREV CLOSE</div>
+                    <div class="text-xl font-semibold">$${quote.pc ? quote.pc.toFixed(2) : 'N/A'}</div>
+                </div>
+            `;
+            document.getElementById('metrics').innerHTML = html;
+        }
+
+        function renderGlobalImpact(ticker) {
+            const impacts = {
+                TSLA: "Highly sensitive to interest rates, EV demand in China/Europe, and regulatory news.",
+                AMD: "AI chip demand and US-China semiconductor tensions are major drivers.",
+                AAPL: "China sales, iPhone cycle, and global consumer spending affect it strongly.",
+                NVDA: "Data center spending, AI hype, and export restrictions to China are key."
+            };
+            document.getElementById('global-impact').innerHTML = `
+                <strong>${ticker} is heavily influenced by global macro trends:</strong><br><br>
+                ${impacts[ticker]}<br><br>
+                Current environment favors AI and growth stocks, but watch Fed policy and geopolitics.
+            `;
         }
 
         function changePeriod(btn, period) {
             document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active', 'bg-emerald-950'));
             btn.classList.add('active', 'bg-emerald-950');
-            // You can expand this later with real data
+            // We can add real historical data later
         }
 
         async function refreshAll() {
@@ -170,11 +219,8 @@
             await selectStock(currentTicker);
         }
 
-        // Init
+        // Initialize
         window.onload = () => {
-            if (API_KEY === "d71fb41r01qot5jd7n50d71fb41r01qot5jd7n5g") {
-                alert("Please replace 'Yd71fb41r01qot5jd7n50d71fb41r01qot5jd7n5g' with your actual Finnhub key in the code!");
-            }
             renderWatchlist();
             selectStock('TSLA');
         };
