@@ -12,6 +12,7 @@
         .title-font { font-family: 'Space Grotesk', sans-serif; }
         .stock-card:hover { transform: translateY(-4px); }
         .chart-container { position: relative; height: 420px; }
+        .news-item:hover { background-color: #27272a; }
         .rec-buy { background: linear-gradient(135deg, #10b981, #34d399); }
         .rec-hold { background: linear-gradient(135deg, #eab308, #facc15); }
         .rec-sell { background: linear-gradient(135deg, #ef4444, #f87171); }
@@ -24,7 +25,10 @@
                 <div class="w-10 h-10 bg-emerald-500 rounded-2xl flex items-center justify-center text-3xl">📈</div>
                 <h1 class="title-font text-4xl tracking-tighter font-semibold">Grok Stock Analyzer</h1>
             </div>
-            <button onclick="refreshAll()" class="flex items-center gap-2 bg-zinc-900 hover:bg-emerald-950 px-6 py-3 rounded-3xl text-sm font-medium">⟳ Refresh All Data</button>
+            <button onclick="refreshAll()" 
+                    class="flex items-center gap-2 bg-zinc-900 hover:bg-emerald-950 px-6 py-3 rounded-3xl text-sm font-medium">
+                ⟳ Refresh All Data
+            </button>
         </nav>
 
         <div class="flex">
@@ -51,7 +55,7 @@
                         <div id="price-change" class="text-3xl mt-2"></div>
                     </div>
 
-                    <!-- Stock Recommendation -->
+                    <!-- Grok Stock Recommendation -->
                     <div id="recommendation-card" class="w-96 rounded-3xl p-7 text-black shadow-2xl">
                         <div class="flex justify-between mb-4">
                             <div class="uppercase text-sm font-bold">GROK RECOMMENDATION</div>
@@ -62,7 +66,7 @@
                     </div>
                 </div>
 
-                <!-- Real Chart -->
+                <!-- Live Chart -->
                 <div class="bg-zinc-900 rounded-3xl p-8 mb-10 border border-zinc-800">
                     <div class="flex justify-between mb-6">
                         <h3 class="text-xl font-semibold">Live Price Chart</h3>
@@ -85,10 +89,16 @@
                 </div>
 
                 <div class="grid grid-cols-2 gap-8">
+                    <!-- Real News Feed -->
                     <div class="bg-zinc-900 rounded-3xl p-8">
-                        <h3 class="text-xl font-semibold mb-6">Latest News</h3>
-                        <div id="news-feed" class="space-y-6 text-zinc-400">Loading news...</div>
+                        <h3 class="text-xl font-semibold mb-6 flex items-center justify-between">
+                            Latest News 
+                            <span id="news-ticker" class="text-xs bg-zinc-800 px-3 py-1 rounded-full"></span>
+                        </h3>
+                        <div id="news-feed" class="space-y-6 max-h-[520px] overflow-y-auto pr-2"></div>
                     </div>
+
+                    <!-- Metrics & Global Impact -->
                     <div class="bg-zinc-900 rounded-3xl p-8">
                         <h3 class="text-xl font-semibold mb-6">Key Metrics & Global Impact</h3>
                         <div id="metrics" class="grid grid-cols-2 gap-6"></div>
@@ -112,20 +122,12 @@
             return res.json();
         }
 
-        // Real historical chart data
         async function fetchChartData(ticker, period) {
-            let resolution = 'D';
-            let days = 30;
-            if (period === '3mo') days = 90;
-            if (period === '6mo') days = 180;
-            if (period === '1y') days = 365;
-
+            let days = period === '1mo' ? 30 : period === '3mo' ? 90 : period === '6mo' ? 180 : 365;
             const to = Math.floor(Date.now() / 1000);
             const from = to - (days * 86400);
-
-            const data = await fetchFinnhub(`stock/candle?symbol=${ticker}&resolution=${resolution}&from=${from}&to=${to}`);
+            const data = await fetchFinnhub(`stock/candle?symbol=${ticker}&resolution=D&from=${from}&to=${to}`);
             if (data.s === 'no_data') throw new Error('No data');
-
             const dates = data.t.map(ts => new Date(ts * 1000).toLocaleDateString('en-US', {month:'short', day:'numeric'}));
             return { dates, closes: data.c };
         }
@@ -133,8 +135,6 @@
         async function renderChart(ticker, period) {
             if (currentChart) currentChart.destroy();
             const ctx = document.getElementById('price-chart');
-            document.getElementById('price-chart').innerHTML = '<div class="text-center py-20 text-zinc-400">Loading chart...</div>';
-
             try {
                 const data = await fetchChartData(ticker, period);
                 currentChart = new Chart(ctx, {
@@ -142,13 +142,12 @@
                     data: {
                         labels: data.dates,
                         datasets: [{
-                            label: ticker + ' Price',
+                            label: ticker,
                             data: data.closes,
                             borderColor: '#10b981',
                             borderWidth: 3,
                             tension: 0.3,
-                            pointRadius: 0,
-                            pointHoverRadius: 5
+                            pointRadius: 0
                         }]
                     },
                     options: {
@@ -159,7 +158,35 @@
                     }
                 });
             } catch(e) {
-                ctx.innerHTML = '<div class="text-center py-20 text-red-400">Chart data temporarily unavailable</div>';
+                ctx.innerHTML = '<div class="text-center py-20 text-amber-400">Chart data temporarily unavailable</div>';
+            }
+        }
+
+        async function renderNews(ticker) {
+            const container = document.getElementById('news-feed');
+            container.innerHTML = '<div class="text-zinc-400 py-8 text-center">Loading latest news...</div>';
+            document.getElementById('news-ticker').textContent = ticker;
+
+            try {
+                const data = await fetchFinnhub(`company-news?symbol=${ticker}&from=${new Date(Date.now() - 7*86400000).toISOString().split('T')[0]}&to=${new Date().toISOString().split('T')[0]}`);
+                
+                container.innerHTML = '';
+                if (data.length === 0) {
+                    container.innerHTML = '<p class="text-zinc-400">No recent news found.</p>';
+                    return;
+                }
+
+                data.slice(0, 8).forEach(article => {
+                    const date = new Date(article.datetime * 1000).toLocaleDateString('en-US', {month:'short', day:'numeric'});
+                    const html = `
+                        <a href="${article.url}" target="_blank" class="news-item block p-4 -mx-4 rounded-2xl transition-colors">
+                            <div class="font-medium leading-tight mb-1">${article.headline}</div>
+                            <div class="text-xs text-zinc-400">${article.source} • ${date}</div>
+                        </a>`;
+                    container.innerHTML += html;
+                });
+            } catch(e) {
+                container.innerHTML = '<p class="text-amber-400">News temporarily unavailable. Try refreshing.</p>';
             }
         }
 
@@ -173,9 +200,14 @@
                     const isUp = changePct >= 0;
                     const html = `
                     <div onclick="selectStock('${ticker}')" class="bg-zinc-900 border ${isUp ? 'border-emerald-500' : 'border-red-500'} rounded-3xl p-5 cursor-pointer">
-                        <div class="flex justify-between"><div><strong>${ticker}</strong></div>
-                        <div class="text-right"><div class="font-semibold">$${quote.c.toFixed(2)}</div>
-                        <div class="${isUp ? 'text-emerald-400' : 'text-red-400'}">${isUp ? '↑' : '↓'} ${changePct.toFixed(2)}%</div></div></div></div>`;
+                        <div class="flex justify-between">
+                            <div><strong>${ticker}</strong></div>
+                            <div class="text-right">
+                                <div class="font-semibold">$${quote.c.toFixed(2)}</div>
+                                <div class="${isUp ? 'text-emerald-400' : 'text-red-400'}">${isUp ? '↑' : '↓'} ${changePct.toFixed(2)}%</div>
+                            </div>
+                        </div>
+                    </div>`;
                     container.innerHTML += html;
                 } catch(e) {}
             }
@@ -195,19 +227,16 @@
             renderOptionsRecommendation(ticker, quote);
             renderMetrics(quote);
             renderGlobalImpact(ticker);
-            renderChart(ticker, '1mo');   // default 1 month
+            renderChart(ticker, '1mo');
+            renderNews(ticker);           // ← Real news feed
         }
 
         function renderRecommendation(ticker, quote) {
             const change = quote.dp || 0;
-            let rec = "HOLD";
-            let conf = 70;
-            let color = "rec-hold";
-            let reason = "Sideways action. Solid long-term story.";
-
-            if (change > 2) { rec = "STRONG BUY"; conf = 88; color = "rec-buy"; reason = "Very strong momentum today."; }
+            let rec = "HOLD", conf = 70, color = "rec-hold", reason = "Solid long-term story.";
+            if (change > 2) { rec = "STRONG BUY"; conf = 88; color = "rec-buy"; reason = "Very strong momentum."; }
             else if (change > 0.5) { rec = "BUY"; conf = 80; color = "rec-buy"; reason = "Positive short-term trend."; }
-            else if (change < -2) { rec = "SELL"; conf = 75; color = "rec-sell"; reason = "Recent weakness detected."; }
+            else if (change < -2) { rec = "SELL"; conf = 75; color = "rec-sell"; reason = "Recent weakness."; }
 
             const card = document.getElementById('recommendation-card');
             card.className = `w-96 rounded-3xl p-7 text-black shadow-2xl ${color}`;
@@ -218,20 +247,16 @@
 
         function renderOptionsRecommendation(ticker, quote) {
             const change = quote.dp || 0;
-            let callPut = "NEUTRAL";
-            let confidence = 65;
-            let reason = "Waiting for clearer direction.";
-
+            let callPut = "NEUTRAL", confidence = 65, reason = "Waiting for clearer direction.";
             if (change > 1.5) {
                 callPut = "BUY CALLS";
                 confidence = 82;
-                reason = `Strong upward momentum. Bullish bias – Calls have high probability of profit.`;
+                reason = "Strong upward momentum — Calls look attractive.";
             } else if (change < -1.5) {
                 callPut = "BUY PUTS";
                 confidence = 78;
-                reason = `Bearish pressure detected. Puts are attractive for short-term downside protection.`;
+                reason = "Bearish pressure — Puts are favorable for downside play.";
             }
-
             document.getElementById('options-recommendation').innerHTML = `
                 <div class="flex-1 bg-black rounded-3xl p-6">
                     <div class="text-emerald-400 text-xl font-bold">${callPut}</div>
@@ -241,7 +266,7 @@
             `;
         }
 
-        function renderMetrics(quote) { /* same as before */ 
+        function renderMetrics(quote) {
             document.getElementById('metrics').innerHTML = `
                 <div class="bg-black rounded-2xl p-5"><div class="text-xs text-zinc-400">OPEN</div><div class="text-2xl">$${quote.o?.toFixed(2)||'N/A'}</div></div>
                 <div class="bg-black rounded-2xl p-5"><div class="text-xs text-zinc-400">HIGH</div><div class="text-2xl">$${quote.h?.toFixed(2)||'N/A'}</div></div>
@@ -250,9 +275,14 @@
             `;
         }
 
-        function renderGlobalImpact(ticker) { /* same as before */ 
-            const impacts = { TSLA: "EV subsidies, China competition, interest rates", AMD: "AI chips + US-China tensions", AAPL: "China sales + iPhone cycle", NVDA: "AI spending + export restrictions" };
-            document.getElementById('global-impact').innerHTML = `<strong>Global factors affecting ${ticker}:</strong><br>${impacts[ticker]}`;
+        function renderGlobalImpact(ticker) {
+            const impacts = {
+                TSLA: "Interest rates, China EV demand, and regulatory news",
+                AMD: "AI chip demand and US-China semiconductor tensions",
+                AAPL: "China sales and iPhone cycle",
+                NVDA: "AI spending and export restrictions to China"
+            };
+            document.getElementById('global-impact').innerHTML = `<strong>Global factors for ${ticker}:</strong><br>${impacts[ticker]}`;
         }
 
         function changePeriod(btn, period) {
