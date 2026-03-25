@@ -34,11 +34,12 @@
                 <div class="mt-10">
                     <h3 class="text-sm text-zinc-400 mb-3">Search Any Ticker</h3>
                     <div class="flex gap-2">
-                        <input id="ticker-input" type="text" placeholder="e.g. MSFT, GOOGL, AMZN" 
+                        <input id="ticker-input" type="text" placeholder="e.g. MSFT, GOOGL, AMZN, META" 
                                class="flex-1 bg-zinc-900 border border-zinc-700 rounded-3xl px-5 py-3 focus:outline-none focus:border-emerald-500">
                         <button onclick="loadCustomTicker()" 
                                 class="bg-emerald-600 hover:bg-emerald-500 px-6 rounded-3xl font-medium">Load</button>
                     </div>
+                    <p class="text-xs text-zinc-500 mt-2">Press Enter after typing</p>
                 </div>
             </div>
 
@@ -64,7 +65,7 @@
                     </div>
                 </div>
 
-                <!-- Real Chart -->
+                <!-- Chart -->
                 <div class="bg-zinc-900 rounded-3xl p-8 mb-10 border border-zinc-800">
                     <div class="flex justify-between mb-6">
                         <h3 class="text-xl font-semibold">Price Chart</h3>
@@ -75,7 +76,7 @@
                             <button onclick="changePeriod(this, '1y')" class="period-btn px-5 py-2 rounded-3xl hover:bg-zinc-800">1Y</button>
                         </div>
                     </div>
-                    <div class="chart-container">
+                    <div class="chart-container" id="chart-area">
                         <canvas id="price-chart"></canvas>
                     </div>
                 </div>
@@ -102,7 +103,7 @@
     </div>
 
     <script>
-        const API_KEY = "d71t3uhr01qpd27969agd71t3uhr01qpd27969b0";   // ← Your new key
+        const API_KEY = "d71t3uhr01qpd27969agd71t3uhr01qpd27969b0";
 
         let currentTicker = 'TSLA';
         let currentChart = null;
@@ -110,8 +111,9 @@
         const defaultWatchlist = ['TSLA', 'AMD', 'AAPL', 'NVDA'];
 
         async function fetchFinnhub(endpoint) {
+            await new Promise(resolve => setTimeout(resolve, 300)); // Small delay to avoid rate limit
             const res = await fetch(`https://finnhub.io/api/v1/${endpoint}&token=${API_KEY}`);
-            if (!res.ok) throw new Error(`API Error: ${res.status}`);
+            if (!res.ok) throw new Error(`API Error ${res.status}`);
             return res.json();
         }
 
@@ -120,15 +122,17 @@
             const to = Math.floor(Date.now() / 1000);
             const from = to - (days * 86400);
             const data = await fetchFinnhub(`stock/candle?symbol=${ticker}&resolution=D&from=${from}&to=${to}`);
-            if (data.s === 'no_data') throw new Error('No chart data');
+            if (data.s === 'no_data' || !data.c || data.c.length === 0) throw new Error('No chart data');
             const dates = data.t.map(ts => new Date(ts * 1000).toLocaleDateString('en-US', {month:'short', day:'numeric'}));
             return { dates, closes: data.c };
         }
 
         async function renderChart(ticker, period = '1mo') {
             if (currentChart) currentChart.destroy();
+            const container = document.getElementById('chart-area');
+            container.innerHTML = '<canvas id="price-chart"></canvas>';
             const ctx = document.getElementById('price-chart');
-            
+
             try {
                 const data = await fetchChartData(ticker, period);
                 currentChart = new Chart(ctx, {
@@ -136,7 +140,7 @@
                     data: {
                         labels: data.dates,
                         datasets: [{
-                            label: ticker + ' Price',
+                            label: ticker,
                             data: data.closes,
                             borderColor: '#10b981',
                             borderWidth: 3,
@@ -155,17 +159,17 @@
                     }
                 });
             } catch(e) {
-                ctx.innerHTML = `<div class="text-center py-20 text-amber-400">Chart data not available for ${ticker}</div>`;
+                container.innerHTML = `<div class="text-center py-20 text-amber-400">Chart data not available right now for ${ticker}.<br>Try 1M or refresh.</div>`;
             }
         }
 
+        // Rest of the functions (watchlist, news, recommendation, etc.) remain the same as previous version
         async function renderNews(ticker) {
             const container = document.getElementById('news-feed');
-            container.innerHTML = '<div class="text-zinc-400 py-8 text-center">Loading latest news...</div>';
+            container.innerHTML = '<div class="text-zinc-400 py-8 text-center">Loading news...</div>';
             try {
                 const fromDate = new Date(Date.now() - 7*86400000).toISOString().split('T')[0];
                 const data = await fetchFinnhub(`company-news?symbol=${ticker}&from=${fromDate}&to=${new Date().toISOString().split('T')[0]}`);
-                
                 container.innerHTML = '';
                 if (!data || data.length === 0) {
                     container.innerHTML = '<p class="text-zinc-400">No recent news found.</p>';
@@ -215,7 +219,6 @@
 
             try {
                 const quote = await fetchFinnhub(`quote?symbol=${currentTicker}`);
-                
                 document.getElementById('current-price').innerHTML = `$${quote.c.toFixed(2)}`;
                 const isUp = quote.dp >= 0;
                 document.getElementById('price-change').innerHTML = `<span class="${isUp ? 'text-emerald-400' : 'text-red-400'}">${isUp ? '▲' : '▼'} ${quote.dp.toFixed(2)}%</span>`;
@@ -227,7 +230,7 @@
                 renderChart(currentTicker, '1mo');
                 renderNews(currentTicker);
             } catch(e) {
-                alert(`Could not load ${currentTicker}. Please check the ticker symbol or try again later.`);
+                alert(`Could not load data for ${currentTicker}. Please try again or use a different ticker.`);
             }
         }
 
@@ -296,7 +299,6 @@
             await selectStock(currentTicker);
         }
 
-        // Initialize
         window.onload = () => {
             renderWatchlist();
             selectStock('TSLA');
