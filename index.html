@@ -10,93 +10,72 @@
     <style>
         body { font-family: 'Inter', system_ui, sans-serif; }
         .title-font { font-family: 'Space Grotesk', sans-serif; }
-        .stock-card:hover { transform: translateY(-4px); }
         .chart-container { position: relative; height: 420px; }
-        .news-item:hover { background-color: #27272a; }
     </style>
 </head>
 <body class="bg-zinc-950 text-zinc-100">
     <div class="max-w-screen-2xl mx-auto">
-        <nav class="bg-black border-b border-zinc-800 px-8 py-5 flex items-center justify-between sticky top-0 z-50">
+        <nav class="bg-black border-b border-zinc-800 px-8 py-5 flex items-center justify-between">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 bg-emerald-500 rounded-2xl flex items-center justify-center text-3xl">📈</div>
                 <h1 class="title-font text-4xl tracking-tighter font-semibold">Grok Stock Analyzer</h1>
             </div>
-            <button onclick="refreshAll()" class="flex items-center gap-2 bg-zinc-900 hover:bg-emerald-950 px-6 py-3 rounded-3xl text-sm font-medium">⟳ Refresh All</button>
+            <button onclick="refreshAll()" class="bg-zinc-900 hover:bg-emerald-600 px-6 py-3 rounded-3xl text-sm font-medium">Refresh All</button>
         </nav>
 
         <div class="flex">
             <!-- Sidebar -->
             <div class="w-80 bg-black border-r border-zinc-800 min-h-screen p-8">
                 <h2 class="uppercase text-xs tracking-widest text-zinc-500 mb-4">Watchlist</h2>
-                <div id="stock-list" class="space-y-4"></div>
+                <div id="stock-list" class="space-y-3"></div>
 
-                <div class="mt-10">
-                    <h3 class="text-sm text-zinc-400 mb-3">Search Any Ticker</h3>
+                <div class="mt-12">
+                    <h3 class="text-sm text-zinc-400 mb-3">Search Ticker</h3>
                     <div class="flex gap-2">
-                        <input id="ticker-input" type="text" placeholder="e.g. MSFT, GOOGL, AMZN, META" 
-                               class="flex-1 bg-zinc-900 border border-zinc-700 rounded-3xl px-5 py-3 focus:outline-none focus:border-emerald-500">
-                        <button onclick="loadCustomTicker()" 
-                                class="bg-emerald-600 hover:bg-emerald-500 px-6 rounded-3xl font-medium">Load</button>
+                        <input id="ticker-input" type="text" placeholder="TSLA, AAPL, MSFT..." 
+                               class="flex-1 bg-zinc-900 border border-zinc-700 rounded-3xl px-5 py-3 text-white focus:border-emerald-500 outline-none">
+                        <button onclick="loadCustomTicker()" class="bg-emerald-600 hover:bg-emerald-500 px-6 rounded-3xl">Load</button>
                     </div>
-                    <p class="text-xs text-zinc-500 mt-2">Press Enter after typing</p>
                 </div>
             </div>
 
-            <!-- Main Content -->
+            <!-- Main Area -->
             <div class="flex-1 p-10">
-                <div id="stock-header" class="flex justify-between items-start mb-10">
+                <div class="flex justify-between items-start mb-8">
                     <div>
                         <div class="flex items-center gap-4">
-                            <h1 id="stock-name" class="title-font text-6xl font-bold"></h1>
+                            <h1 id="stock-name" class="title-font text-6xl font-bold text-white">TSLA</h1>
                             <span id="stock-ticker" class="text-4xl font-mono text-zinc-400"></span>
                         </div>
-                        <div id="current-price" class="text-6xl font-semibold mt-3"></div>
-                        <div id="price-change" class="text-3xl mt-2"></div>
+                        <div id="current-price" class="text-6xl font-semibold mt-2"></div>
+                        <div id="price-change" class="text-3xl mt-1"></div>
                     </div>
 
-                    <div id="recommendation-card" class="w-96 rounded-3xl p-7 text-black shadow-2xl">
-                        <div class="flex justify-between mb-4">
-                            <div class="uppercase text-sm font-bold">GROK RECOMMENDATION</div>
-                            <div id="rec-badge" class="px-6 py-1 text-sm font-bold rounded-3xl"></div>
-                        </div>
-                        <div id="rec-confidence" class="text-5xl font-bold mb-2"></div>
-                        <p id="rec-reason" class="text-base"></p>
+                    <div id="recommendation-card" class="w-80 rounded-3xl p-6 text-black">
+                        <!-- Filled by JS -->
                     </div>
                 </div>
 
                 <!-- Chart -->
-                <div class="bg-zinc-900 rounded-3xl p-8 mb-10 border border-zinc-800">
+                <div class="bg-zinc-900 rounded-3xl p-8 mb-10">
                     <div class="flex justify-between mb-6">
                         <h3 class="text-xl font-semibold">Price Chart</h3>
-                        <div class="flex gap-2 text-sm">
-                            <button onclick="changePeriod(this, '1mo')" class="period-btn active px-5 py-2 rounded-3xl bg-emerald-950">1M</button>
-                            <button onclick="changePeriod(this, '3mo')" class="period-btn px-5 py-2 rounded-3xl hover:bg-zinc-800">3M</button>
-                            <button onclick="changePeriod(this, '6mo')" class="period-btn px-5 py-2 rounded-3xl hover:bg-zinc-800">6M</button>
-                            <button onclick="changePeriod(this, '1y')" class="period-btn px-5 py-2 rounded-3xl hover:bg-zinc-800">1Y</button>
+                        <div class="flex gap-3">
+                            <button onclick="changePeriod(this, '1mo')" class="period-btn active px-4 py-1.5 rounded-3xl bg-emerald-600 text-sm">1M</button>
+                            <button onclick="changePeriod(this, '3mo')" class="period-btn px-4 py-1.5 rounded-3xl hover:bg-zinc-800 text-sm">3M</button>
+                            <button onclick="changePeriod(this, '6mo')" class="period-btn px-4 py-1.5 rounded-3xl hover:bg-zinc-800 text-sm">6M</button>
+                            <button onclick="changePeriod(this, '1y')" class="period-btn px-4 py-1.5 rounded-3xl hover:bg-zinc-800 text-sm">1Y</button>
                         </div>
                     </div>
-                    <div class="chart-container" id="chart-area">
+                    <div class="chart-container">
                         <canvas id="price-chart"></canvas>
                     </div>
+                    <div id="chart-status" class="text-center text-amber-400 text-sm mt-4 hidden"></div>
                 </div>
 
-                <!-- Options Recommendation -->
-                <div class="bg-zinc-900 rounded-3xl p-8 mb-10">
-                    <h3 class="text-xl font-semibold mb-6">📌 Grok Options Play</h3>
-                    <div id="options-recommendation" class="flex gap-6"></div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-8">
-                    <div class="bg-zinc-900 rounded-3xl p-8">
-                        <h3 class="text-xl font-semibold mb-6">Latest News</h3>
-                        <div id="news-feed" class="space-y-6 max-h-[520px] overflow-y-auto"></div>
-                    </div>
-                    <div class="bg-zinc-900 rounded-3xl p-8">
-                        <h3 class="text-xl font-semibold mb-6">Key Metrics & Global Impact</h3>
-                        <div id="metrics" class="grid grid-cols-2 gap-6"></div>
-                        <div id="global-impact" class="mt-8 bg-black/70 rounded-2xl p-6 text-sm"></div>
-                    </div>
+                <!-- Simple Status -->
+                <div class="text-xs text-zinc-500 text-center">
+                    If the chart is still blank, try clicking "Refresh All" or search for another ticker like MSFT or NVDA.
                 </div>
             </div>
         </div>
@@ -105,43 +84,100 @@
     <script>
         const API_KEY = "d71t3uhr01qpd27969agd71t3uhr01qpd27969b0";
 
-        let currentTicker = 'TSLA';
+        let currentTicker = "TSLA";
         let currentChart = null;
 
-        const defaultWatchlist = ['TSLA', 'AMD', 'AAPL', 'NVDA'];
+        const watchlist = ["TSLA", "AMD", "AAPL", "NVDA"];
 
-        async function fetchFinnhub(endpoint) {
-            await new Promise(resolve => setTimeout(resolve, 300)); // Small delay to avoid rate limit
-            const res = await fetch(`https://finnhub.io/api/v1/${endpoint}&token=${API_KEY}`);
-            if (!res.ok) throw new Error(`API Error ${res.status}`);
+        async function fetchWithDelay(url) {
+            await new Promise(r => setTimeout(r, 400)); // Prevent rate limit
+            const res = await fetch(url);
+            if (!res.ok) throw new Error("API failed");
             return res.json();
         }
 
-        async function fetchChartData(ticker, period) {
-            let days = period === '1mo' ? 30 : period === '3mo' ? 90 : period === '6mo' ? 180 : 365;
-            const to = Math.floor(Date.now() / 1000);
-            const from = to - (days * 86400);
-            const data = await fetchFinnhub(`stock/candle?symbol=${ticker}&resolution=D&from=${from}&to=${to}`);
-            if (data.s === 'no_data' || !data.c || data.c.length === 0) throw new Error('No chart data');
-            const dates = data.t.map(ts => new Date(ts * 1000).toLocaleDateString('en-US', {month:'short', day:'numeric'}));
-            return { dates, closes: data.c };
+        async function renderWatchlist() {
+            const container = document.getElementById("stock-list");
+            container.innerHTML = "";
+            for (let t of watchlist) {
+                try {
+                    const q = await fetchWithDelay(`https://finnhub.io/api/v1/quote?symbol=${t}&token=${API_KEY}`);
+                    const change = q.dp || 0;
+                    const isUp = change >= 0;
+                    container.innerHTML += `
+                        <div onclick="selectStock('${t}')" class="bg-zinc-900 border ${isUp ? 'border-emerald-500' : 'border-red-500'} rounded-3xl p-4 cursor-pointer flex justify-between">
+                            <div class="font-semibold">${t}</div>
+                            <div class="text-right">
+                                <div>$${q.c.toFixed(2)}</div>
+                                <div class="${isUp ? 'text-emerald-400' : 'text-red-400'} text-sm">${isUp ? '↑' : '↓'} ${change.toFixed(2)}%</div>
+                            </div>
+                        </div>`;
+                } catch(e) {}
+            }
         }
 
-        async function renderChart(ticker, period = '1mo') {
-            if (currentChart) currentChart.destroy();
-            const container = document.getElementById('chart-area');
-            container.innerHTML = '<canvas id="price-chart"></canvas>';
-            const ctx = document.getElementById('price-chart');
+        async function selectStock(ticker) {
+            currentTicker = ticker.toUpperCase();
+            document.getElementById("stock-ticker").textContent = currentTicker;
+            document.getElementById("stock-name").textContent = currentTicker;
 
             try {
-                const data = await fetchChartData(ticker, period);
+                const quote = await fetchWithDelay(`https://finnhub.io/api/v1/quote?symbol=${currentTicker}&token=${API_KEY}`);
+                
+                document.getElementById("current-price").innerHTML = `$${quote.c.toFixed(2)}`;
+                const isUp = quote.dp >= 0;
+                document.getElementById("price-change").innerHTML = `
+                    <span class="${isUp ? 'text-emerald-400' : 'text-red-400'}">
+                        ${isUp ? '▲' : '▼'} ${quote.dp.toFixed(2)}%
+                    </span>`;
+
+                // Simple recommendation
+                const card = document.getElementById("recommendation-card");
+                let recText = quote.dp > 1 ? "BUY" : "HOLD";
+                let color = quote.dp > 1 ? "bg-emerald-500" : "bg-amber-400";
+                card.innerHTML = `
+                    <div class="flex justify-between mb-3">
+                        <div class="uppercase text-xs font-bold">GROK RECOMMENDATION</div>
+                        <div class="${color} text-black px-4 py-1 rounded-3xl text-sm font-bold">${recText}</div>
+                    </div>
+                    <div class="text-5xl font-bold">${Math.abs(quote.dp * 10).toFixed(0)}% Confidence</div>
+                    <p class="mt-3 text-sm">${quote.dp > 0 ? "Positive momentum" : "Sideways / cautious"}</p>
+                `;
+
+                // Render real chart
+                renderChart(currentTicker, "1mo");
+
+            } catch(e) {
+                alert("Failed to load " + currentTicker + ". Your API key may have reached limit or is invalid.");
+            }
+        }
+
+        async function renderChart(ticker, period) {
+            if (currentChart) currentChart.destroy();
+            const ctx = document.getElementById("price-chart");
+            const status = document.getElementById("chart-status");
+            status.classList.add("hidden");
+
+            try {
+                let days = period === "1mo" ? 30 : period === "3mo" ? 90 : period === "6mo" ? 180 : 365;
+                const to = Math.floor(Date.now() / 1000);
+                const from = to - (days * 86400);
+
+                const data = await fetchWithDelay(`https://finnhub.io/api/v1/stock/candle?symbol=${ticker}&resolution=D&from=${from}&to=${to}&token=${API_KEY}`);
+
+                if (data.s === "no_data" || !data.c || data.c.length < 2) {
+                    throw new Error("no data");
+                }
+
+                const dates = data.t.map(ts => new Date(ts*1000).toLocaleDateString('en-US', {month:'short', day:'numeric'}));
+
                 currentChart = new Chart(ctx, {
                     type: 'line',
                     data: {
-                        labels: data.dates,
+                        labels: dates,
                         datasets: [{
                             label: ticker,
-                            data: data.closes,
+                            data: data.c,
                             borderColor: '#10b981',
                             borderWidth: 3,
                             tension: 0.3,
@@ -153,145 +189,26 @@
                         maintainAspectRatio: false,
                         plugins: { legend: { display: false } },
                         scales: {
-                            x: { grid: { color: '#27272a' }, ticks: { color: '#a1a1aa' } },
-                            y: { grid: { color: '#27272a' }, ticks: { color: '#a1a1aa' } }
+                            x: { grid: { color: '#27272a' } },
+                            y: { grid: { color: '#27272a' } }
                         }
                     }
                 });
             } catch(e) {
-                container.innerHTML = `<div class="text-center py-20 text-amber-400">Chart data not available right now for ${ticker}.<br>Try 1M or refresh.</div>`;
+                status.textContent = "Chart data not available right now. Try Refresh All or another ticker.";
+                status.classList.remove("hidden");
             }
-        }
-
-        // Rest of the functions (watchlist, news, recommendation, etc.) remain the same as previous version
-        async function renderNews(ticker) {
-            const container = document.getElementById('news-feed');
-            container.innerHTML = '<div class="text-zinc-400 py-8 text-center">Loading news...</div>';
-            try {
-                const fromDate = new Date(Date.now() - 7*86400000).toISOString().split('T')[0];
-                const data = await fetchFinnhub(`company-news?symbol=${ticker}&from=${fromDate}&to=${new Date().toISOString().split('T')[0]}`);
-                container.innerHTML = '';
-                if (!data || data.length === 0) {
-                    container.innerHTML = '<p class="text-zinc-400">No recent news found.</p>';
-                    return;
-                }
-                data.slice(0, 8).forEach(article => {
-                    const date = new Date(article.datetime * 1000).toLocaleDateString('en-US', {month:'short', day:'numeric'});
-                    const html = `
-                        <a href="${article.url}" target="_blank" class="news-item block p-4 -mx-4 rounded-2xl transition-colors">
-                            <div class="font-medium leading-tight mb-1">${article.headline}</div>
-                            <div class="text-xs text-zinc-400">${article.source} • ${date}</div>
-                        </a>`;
-                    container.innerHTML += html;
-                });
-            } catch(e) {
-                container.innerHTML = '<p class="text-amber-400">News temporarily unavailable.</p>';
-            }
-        }
-
-        async function renderWatchlist() {
-            const container = document.getElementById('stock-list');
-            container.innerHTML = '';
-            for (let ticker of defaultWatchlist) {
-                try {
-                    const quote = await fetchFinnhub(`quote?symbol=${ticker}`);
-                    const changePct = quote.dp || 0;
-                    const isUp = changePct >= 0;
-                    const html = `
-                    <div onclick="selectStock('${ticker}')" class="bg-zinc-900 border ${isUp ? 'border-emerald-500' : 'border-red-500'} rounded-3xl p-5 cursor-pointer">
-                        <div class="flex justify-between">
-                            <div><strong>${ticker}</strong></div>
-                            <div class="text-right">
-                                <div class="font-semibold">$${quote.c.toFixed(2)}</div>
-                                <div class="${isUp ? 'text-emerald-400' : 'text-red-400'}">${isUp ? '↑' : '↓'} ${changePct.toFixed(2)}%</div>
-                            </div>
-                        </div>
-                    </div>`;
-                    container.innerHTML += html;
-                } catch(e) {}
-            }
-        }
-
-        async function selectStock(ticker) {
-            currentTicker = ticker.toUpperCase();
-            document.getElementById('stock-ticker').textContent = currentTicker;
-            document.getElementById('stock-name').textContent = currentTicker;
-
-            try {
-                const quote = await fetchFinnhub(`quote?symbol=${currentTicker}`);
-                document.getElementById('current-price').innerHTML = `$${quote.c.toFixed(2)}`;
-                const isUp = quote.dp >= 0;
-                document.getElementById('price-change').innerHTML = `<span class="${isUp ? 'text-emerald-400' : 'text-red-400'}">${isUp ? '▲' : '▼'} ${quote.dp.toFixed(2)}%</span>`;
-
-                renderRecommendation(quote);
-                renderOptionsRecommendation(quote);
-                renderMetrics(quote);
-                renderGlobalImpact(currentTicker);
-                renderChart(currentTicker, '1mo');
-                renderNews(currentTicker);
-            } catch(e) {
-                alert(`Could not load data for ${currentTicker}. Please try again or use a different ticker.`);
-            }
-        }
-
-        function renderRecommendation(quote) {
-            const change = quote.dp || 0;
-            let rec = "HOLD", conf = 70, color = "bg-amber-400", reason = "Solid long-term story.";
-            if (change > 2) { rec = "STRONG BUY"; conf = 88; color = "bg-emerald-500"; reason = "Very strong momentum today."; }
-            else if (change > 0.5) { rec = "BUY"; conf = 80; color = "bg-emerald-500"; reason = "Positive short-term trend."; }
-            else if (change < -2) { rec = "SELL"; conf = 75; color = "bg-red-500"; reason = "Recent weakness detected."; }
-
-            const card = document.getElementById('recommendation-card');
-            card.className = `w-96 rounded-3xl p-7 text-black shadow-2xl ${color}`;
-            document.getElementById('rec-badge').innerHTML = rec;
-            document.getElementById('rec-confidence').innerHTML = `${conf}%`;
-            document.getElementById('rec-reason').innerHTML = reason;
-        }
-
-        function renderOptionsRecommendation(quote) {
-            const change = quote.dp || 0;
-            let callPut = "NEUTRAL", confidence = 65, reason = "Waiting for clearer direction.";
-            if (change > 1.5) {
-                callPut = "BUY CALLS";
-                confidence = 82;
-                reason = "Strong upward momentum — Calls look attractive.";
-            } else if (change < -1.5) {
-                callPut = "BUY PUTS";
-                confidence = 78;
-                reason = "Bearish pressure — Puts are favorable.";
-            }
-            document.getElementById('options-recommendation').innerHTML = `
-                <div class="flex-1 bg-black rounded-3xl p-6">
-                    <div class="text-emerald-400 text-xl font-bold">${callPut}</div>
-                    <div class="text-4xl font-bold mt-2">${confidence}% Confidence</div>
-                    <p class="text-zinc-300 mt-4">${reason}</p>
-                </div>
-            `;
-        }
-
-        function renderMetrics(quote) {
-            document.getElementById('metrics').innerHTML = `
-                <div class="bg-black rounded-2xl p-5"><div class="text-xs text-zinc-400">OPEN</div><div class="text-2xl">$${quote.o?.toFixed(2)||'N/A'}</div></div>
-                <div class="bg-black rounded-2xl p-5"><div class="text-xs text-zinc-400">HIGH</div><div class="text-2xl">$${quote.h?.toFixed(2)||'N/A'}</div></div>
-                <div class="bg-black rounded-2xl p-5"><div class="text-xs text-zinc-400">LOW</div><div class="text-2xl">$${quote.l?.toFixed(2)||'N/A'}</div></div>
-                <div class="bg-black rounded-2xl p-5"><div class="text-xs text-zinc-400">PREV CLOSE</div><div class="text-2xl">$${quote.pc?.toFixed(2)||'N/A'}</div></div>
-            `;
-        }
-
-        function renderGlobalImpact(ticker) {
-            const impacts = { TSLA: "EV demand, China, interest rates", AMD: "AI chips, US-China tensions", AAPL: "China sales, iPhone cycle", NVDA: "AI spending, export restrictions" };
-            document.getElementById('global-impact').innerHTML = `<strong>Global factors for ${ticker}:</strong><br>${impacts[ticker] || 'Macro trends and sector news'}`;
         }
 
         function changePeriod(btn, period) {
-            document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active', 'bg-emerald-950'));
-            btn.classList.add('active', 'bg-emerald-950');
+            document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active', 'bg-emerald-600'));
+            btn.classList.add('active', 'bg-emerald-600');
             renderChart(currentTicker, period);
         }
 
         function loadCustomTicker() {
-            let input = document.getElementById('ticker-input').value.trim().toUpperCase();
-            if (input) selectStock(input);
+            let val = document.getElementById("ticker-input").value.trim().toUpperCase();
+            if (val) selectStock(val);
         }
 
         async function refreshAll() {
@@ -299,9 +216,10 @@
             await selectStock(currentTicker);
         }
 
+        // Start
         window.onload = () => {
             renderWatchlist();
-            selectStock('TSLA');
+            selectStock("TSLA");
         };
     </script>
 </body>
